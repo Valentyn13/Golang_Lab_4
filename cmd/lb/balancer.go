@@ -45,6 +45,22 @@ func scheme() string {
 	return "http"
 }
 
+func minServerIndex() int {
+	minIndex := -1
+	minCount := -1 // also can be named like minConnCnt
+
+	for i, server := range serversPool {
+		if server.Healthy {
+			if minIndex == -1 || server.ConnCnt < minCount {
+				minIndex = i
+				minCount = server.ConnCnt
+			}
+		}
+	}
+
+	return minIndex
+}
+
 func health(s *Server) bool {
 	ctx, _ := context.WithTimeout(context.Background(), timeout)
 	req, _ := http.NewRequestWithContext(ctx, "GET",
