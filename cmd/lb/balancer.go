@@ -75,13 +75,24 @@ func health(s *Server) bool {
 	return true
 }
 
-func forward(dst string, rw http.ResponseWriter, r *http.Request) error {
+func forward(rw http.ResponseWriter, r *http.Request) error {
 	ctx, _ := context.WithTimeout(r.Context(), timeout)
 	fwdRequest := r.Clone(ctx)
+	mutex.Lock()
+	minIndex := minServerIndex()
+
+	if minIndex == -1 {
+		mutex.Unlock()
+		rw.WriteHeader(http.StatusServiceUnavailable)
+		return fmt.Errorf("no healthy servers available")
+	}
+	dst := serversPool[minIndex]
+	dst.ConnCnt++
+	mutex.Unlock()
 	fwdRequest.RequestURI = ""
-	fwdRequest.URL.Host = dst
+	fwdRequest.URL.Host = dst.URL
 	fwdRequest.URL.Scheme = scheme()
-	fwdRequest.Host = dst
+	fwdRequest.Host = dst.URL
 
 	resp, err := http.DefaultClient.Do(fwdRequest)
 	if err == nil {
@@ -91,7 +102,7 @@ func forward(dst string, rw http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		if *traceEnabled {
-			rw.Header().Set("lb-from", dst)
+			rw.Header().Set("lb-from", dst.URL)
 		}
 		log.Println("fwd", resp.StatusCode, resp.Request.URL)
 		rw.WriteHeader(resp.StatusCode)
@@ -102,7 +113,7 @@ func forward(dst string, rw http.ResponseWriter, r *http.Request) error {
 		}
 		return nil
 	} else {
-		log.Printf("Failed to get response from %s: %s", dst, err)
+		log.Printf("Failed to get response from %s: %s", dst.URL, err)
 		rw.WriteHeader(http.StatusServiceUnavailable)
 		return err
 	}
