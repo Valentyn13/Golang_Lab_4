@@ -7,27 +7,35 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/roman-mazur/design-practice-2-template/httptools"
 	"github.com/roman-mazur/design-practice-2-template/signal"
 )
 
+type Server struct {
+	URL     string
+	ConnCnt int
+	Healthy bool
+}
+
 var (
-	port = flag.Int("port", 8090, "load balancer port")
+	port       = flag.Int("port", 8090, "load balancer port")
 	timeoutSec = flag.Int("timeout-sec", 3, "request timeout time in seconds")
-	https = flag.Bool("https", false, "whether backends support HTTPs")
+	https      = flag.Bool("https", false, "whether backends support HTTPs")
 
 	traceEnabled = flag.Bool("trace", false, "whether to include tracing information into responses")
 )
 
 var (
-	timeout = time.Duration(*timeoutSec) * time.Second
-	serversPool = []string{
-		"server1:8080",
-		"server2:8080",
-		"server3:8080",
+	timeout     = time.Duration(*timeoutSec) * time.Second
+	serversPool = []*Server{
+		{URL: "server1:8080"},
+		{URL: "server2:8080"},
+		{URL: "server3:8080"},
 	}
+	mutex sync.Mutex
 )
 
 func scheme() string {
@@ -37,10 +45,10 @@ func scheme() string {
 	return "http"
 }
 
-func health(dst string) bool {
+func health(s *Server) bool {
 	ctx, _ := context.WithTimeout(context.Background(), timeout)
 	req, _ := http.NewRequestWithContext(ctx, "GET",
-		fmt.Sprintf("%s://%s/health", scheme(), dst), nil)
+		fmt.Sprintf("%s://%s/health", scheme(), s.URL), nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return false
@@ -99,7 +107,7 @@ func main() {
 
 	frontend := httptools.CreateServer(*port, http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		// TODO: Рееалізуйте свій алгоритм балансувальника.
-		forward(serversPool[0], rw, r)
+		forward(rw, r)
 	}))
 
 	log.Println("Starting load balancer...")
