@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/roman-mazur/design-practice-2-template/httptools"
-	"github.com/roman-mazur/design-practice-2-template/signal"
+	"github.com/Valentyn13/Golang_Lab_4/httptools"
+	"github.com/Valentyn13/Golang_Lab_4/signal"
 )
 
 type Server struct {
