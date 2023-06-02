@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
@@ -22,6 +24,20 @@ func (s *MySuite) TearDownSuite(c *C) {
   httpmock.DeactivateAndReset()
 }
 
+func (s *MySuite) TestForward(c *C) {
+  httpmock.RegisterResponder("GET", "http://server1:8080/",
+    httpmock.NewStringResponder(200, "OK"))
+
+  serversPool = []*Server{
+    {URL: "server1:8080", Healthy: true},
+  }
+
+  req, err := http.NewRequest("GET", "/", nil)
+  c.Assert(err, IsNil)
+  rr := httptest.NewRecorder()
+  err = forwardControll(rr, req)
+  c.Assert(err, IsNil)
+}
 
 func (s *MySuite) TestFindMinServer(c *C) {
   serversPool = nil
