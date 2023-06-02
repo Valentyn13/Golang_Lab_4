@@ -61,7 +61,7 @@ func minServerIndex() int {
 	return minIndex
 }
 
-func health(s *Server) bool {
+func isActive(s *Server) bool {
 	ctx, _ := context.WithTimeout(context.Background(), timeout)
 	req, _ := http.NewRequestWithContext(ctx, "GET",
 		fmt.Sprintf("%s://%s/health", scheme(), s.URL), nil)
@@ -75,7 +75,7 @@ func health(s *Server) bool {
 	return true
 }
 
-func forward(rw http.ResponseWriter, r *http.Request) error {
+func forwardControll(rw http.ResponseWriter, r *http.Request) error {
 	ctx, _ := context.WithTimeout(r.Context(), timeout)
 	fwdRequest := r.Clone(ctx)
 	mutex.Lock()
@@ -128,8 +128,8 @@ func main() {
 		go func(s *Server) {
 			for range time.Tick(10 * time.Second) {
 				mutex.Lock()
-				s.Healthy = health(s)
-				log.Println(server, health(server))
+				s.Healthy = isActive(s)
+				log.Println(server, isActive(server))
 				mutex.Unlock()
 			}
 		}(server)
@@ -137,7 +137,7 @@ func main() {
 
 	frontend := httptools.CreateServer(*port, http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		// TODO: Рееалізуйте свій алгоритм балансувальника.
-		forward(rw, r)
+		forwardControll(rw, r)
 	}))
 
 	log.Println("Starting load balancer...")
