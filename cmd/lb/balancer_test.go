@@ -61,3 +61,18 @@ func (s *MySuite) TestFindMinServer(c *C) {
   }
   c.Assert(minServerIndex(), Equals, 0)
 }
+
+func (s *MySuite) TestForwardWithUnhealthyServer(c *C) {
+  httpmock.RegisterResponder("GET", "http://server1:8080/",
+    httpmock.NewStringResponder(500, "Error"))
+
+  serversPool = []*Server{
+    {URL: "server1:8080", Healthy: false},
+  }
+
+  req, err := http.NewRequest("GET", "/", nil)
+  c.Assert(err, IsNil)
+  rr := httptest.NewRecorder()
+  err = forwardControll(rr, req)
+  c.Assert(err, NotNil)
+}
