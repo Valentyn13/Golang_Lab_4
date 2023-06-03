@@ -8,25 +8,29 @@ import (
 	"time"
 )
 
+type IntegrationTestSuite struct{}
+
+var _ = Suite(&IntegrationTestSuite{})
+
+func TestBalancer(t *testing.T) {
+	TestingT(t)
+}
+
 const baseAddress = "http://balancer:8090"
 
 var client = http.Client{
 	Timeout: 3 * time.Second,
 }
 
-func TestBalancer(t *testing.T) {
+func (s *IntegrationTestSuite) TestBenchmark(c *C) {
 	if _, exists := os.LookupEnv("INTEGRATION_TEST"); !exists {
-		t.Skip("Integration test is not enabled")
+		c.Skip("Integration test is not enabled")
 	}
-
-	// TODO: Реалізуйте інтеграційний тест для балансувальникка.
-	resp, err := client.Get(fmt.Sprintf("%s/api/v1/some-data", baseAddress))
-	if err != nil {
-		t.Error(err)
+	for i := 0; i < c.N; i++ {
+		_, err := client.Get(fmt.Sprintf("%s/api/v1/some-data", baseAddress))
+		if err != nil {
+			c.Error(err)
+		}
 	}
-	t.Logf("response from [%s]", resp.Header.Get("lb-from"))
 }
 
-func BenchmarkBalancer(b *testing.B) {
-	// TODO: Реалізуйте інтеграційний бенчмарк для балансувальникка.
-}
